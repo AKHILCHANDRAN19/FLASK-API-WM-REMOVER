@@ -1,240 +1,240 @@
-from flask import Flask, request, jsonify, send_file
 import cv2
 import numpy as np
-import requests
+import base64
 import io
 import uuid
+from flask import Flask, request, render_template_string, send_file
+from werkzeug.utils import secure_filename
 from skimage.feature import match_template
-import base64
 
 app = Flask(__name__)
 
-# Global storage for processed images
+# Global dictionary to hold processed image bytes (for download)
 PROCESSED_IMAGES = {}
 
-# Watermark URL
-WATERMARK_URL = "https://drive.google.com/file/d/1C4yUuDhfQsGe43hO3qmoYLKUpz-t7CUq/view?usp=drivesdk"
+# HTML templates (embedded HTML, CSS, and minimal JS)
+INDEX_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Watermark Remover</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        label { font-weight: bold; }
+        input, button { margin-top: 5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Watermark Remover</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <label>Select images (multiple allowed):</label><br>
+        <input type="file" name="images" multiple required><br><br>
+        <label>Watermark Text (default is "Meta AI"):</label><br>
+        <input type="text" name="watermark_text" placeholder="Enter watermark text"><br><br>
+        <label>Upload Watermark Image (optional):</label><br>
+        <input type="file" name="watermark_image"><br><br>
+        <button type="submit">Remove Watermark</button>
+    </form>
+</div>
+</body>
+</html>
+"""
 
-def download_watermark():
-    """Download watermark image from Google Drive."""
-    try:
-        file_id = WATERMARK_URL.split('/')[5]
-        direct_url = f"https://drive.google.com/uc?id={file_id}"
-        response = requests.get(direct_url)
-        if response.status_code == 200:
-            image_array = np.frombuffer(response.content, np.uint8)
-            return cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-        return None
-    except Exception as e:
-        print(f"Error downloading watermark: {str(e)}")
-        return None
+RESULT_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Watermark Removal Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        .image-pair { margin-bottom: 30px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
+        .image-pair img { max-width: 300px; margin-right: 10px; border: 1px solid #ddd; }
+        .download { margin-top: 10px; }
+        .detection { background: #f0f0f0; padding: 5px; margin-top: 5px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Results</h1>
+    {% for item in images %}
+    <div class="image-pair">
+        <h3>{{ item.filename }}</h3>
+        <div>
+            <strong>Before:</strong><br>
+            <img src="data:image/png;base64,{{ item.original }}" alt="Original Image">
+        </div>
+        <div>
+            <strong>After:</strong><br>
+            <img src="data:image/png;base64,{{ item.processed }}" alt="Processed Image">
+        </div>
+        <div class="detection">
+            <strong>Detection Info:</strong><br>
+            {% for msg in item.detections %}
+                {{ msg }}<br>
+            {% endfor %}
+        </div>
+        <div class="download">
+            <a href="/download/{{ item.uid }}">Download Processed Image</a>
+        </div>
+    </div>
+    {% endfor %}
+    <br><a href="/">&#8592; Back to Upload</a>
+</div>
+</body>
+</html>
+"""
 
-WATERMARK_IMAGE = download_watermark()
+def read_image_from_file(file_storage):
+    """Read an image from a Werkzeug FileStorage and return a cv2 image (BGR)."""
+    file_bytes = np.frombuffer(file_storage.read(), np.uint8)
+    image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    file_storage.stream.seek(0)
+    return image
 
-def remove_watermark(image, text="Meta AI"):
-    """Process image for watermark removal."""
-    try:
-        # Convert image to grayscale
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+def generate_text_template(text, font_scale=1.0, thickness=2):
+    """Generate a grayscale template image with the given text."""
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+    # Create a black image with some padding
+    template = np.zeros((text_height + baseline + 10, text_width + 10), dtype=np.uint8)
+    cv2.putText(template, text, (5, text_height + 5), font, font_scale, 255, thickness, cv2.LINE_AA)
+    return template
+
+def cv2_to_base64(image):
+    """Encode a cv2 image (BGR) as a PNG image in base64."""
+    success, buffer = cv2.imencode('.png', image)
+    if success:
+        return base64.b64encode(buffer).decode('utf-8')
+    return None
+
+def multi_scale_match(roi, template, scales):
+    """
+    Perform multi-scale matching for a given template in the ROI.
+    Both roi and template are expected to be preprocessed (grayscale, equalized).
+    Returns best score, best location (in ROI coordinates), and the best template shape.
+    """
+    best_score = -1
+    best_loc = None
+    best_shape = None
+    for s in scales:
+        # Resize template
+        new_w = int(template.shape[1] * s)
+        new_h = int(template.shape[0] * s)
+        if new_w < 10 or new_h < 10 or new_w > roi.shape[1] or new_h > roi.shape[0]:
+            continue
+        resized = cv2.resize(template, (new_w, new_h))
+        result = match_template(roi.astype(np.float32), resized.astype(np.float32))
+        max_score = result.max()
+        if max_score > best_score:
+            best_score = max_score
+            best_loc = np.unravel_index(np.argmax(result), result.shape)
+            best_shape = resized.shape
+    return best_score, best_loc, best_shape
+
+def remove_watermark(image, wm_text=None, wm_img=None, threshold=0.5):
+    """
+    Improved watermark detection and removal.
+    Searches for watermark (text and/or image) in the bottom-right region.
+    Uses histogram equalization and multi-scale template matching.
+    Returns the processed image and detection messages.
+    """
+    detection_messages = []
+    mask = np.zeros(image.shape[:2], dtype=np.uint8)
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    h, w = gray_image.shape
+
+    # Define ROI in bottom-right (from 70% height and width to the end)
+    roi_y = int(h * 0.7)
+    roi_x = int(w * 0.7)
+    roi = gray_image[roi_y:, roi_x:]
+    # Preprocess ROI: histogram equalization
+    roi_eq = cv2.equalizeHist(roi)
+
+    scales = np.linspace(0.8, 1.2, 5)  # multi-scale factors
+
+    # Text watermark detection
+    if wm_text:
+        text_template = generate_text_template(wm_text, font_scale=1.0, thickness=2)
+        # Preprocess template: equalize histogram
+        text_template_eq = cv2.equalizeHist(text_template)
+        best_score, best_loc, best_shape = multi_scale_match(roi_eq, text_template_eq, scales)
+        if best_score >= threshold and best_loc is not None:
+            abs_y = roi_y + best_loc[0]
+            abs_x = roi_x + best_loc[1]
+            detection_messages.append(f"Text watermark '{wm_text}' detected at (x={abs_x}, y={abs_y}) with score {best_score:.2f}")
+            cv2.rectangle(mask, (abs_x, abs_y), (abs_x + best_shape[1], abs_y + best_shape[0]), 255, -1)
+        else:
+            detection_messages.append(f"Text watermark '{wm_text}' not confidently detected (max score {best_score:.2f}).")
+    
+    # Image watermark detection
+    if wm_img is not None:
+        # Convert watermark image to grayscale and equalize
+        if len(wm_img.shape) == 3:
+            wm_gray = cv2.cvtColor(wm_img, cv2.COLOR_BGR2GRAY)
+        else:
+            wm_gray = wm_img
+        wm_eq = cv2.equalizeHist(wm_gray)
+        best_score_img, best_loc_img, best_shape_img = multi_scale_match(roi_eq, wm_eq, scales)
+        if best_score_img >= threshold and best_loc_img is not None:
+            abs_y_img = roi_y + best_loc_img[0]
+            abs_x_img = roi_x + best_loc_img[1]
+            detection_messages.append(f"Image watermark detected at (x={abs_x_img}, y={abs_y_img}) with score {best_score_img:.2f}")
+            cv2.rectangle(mask, (abs_x_img, abs_y_img), (abs_x_img + best_shape_img[1], abs_y_img + best_shape_img[0]), 255, -1)
+        else:
+            detection_messages.append(f"Image watermark not confidently detected (max score {best_score_img:.2f}).")
+    
+    # Inpaint the detected regions
+    processed = cv2.inpaint(image, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+    return processed, detection_messages
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        files = request.files.getlist("images")
+        # Use watermark text if provided; default to "Meta AI" if empty
+        wm_text = request.form.get("watermark_text", "").strip() or "Meta AI"
+        watermark_image_file = request.files.get("watermark_image")
+        wm_img = None
+        if watermark_image_file and watermark_image_file.filename != "":
+            watermark_image_file.filename = secure_filename(watermark_image_file.filename)
+            wm_img = read_image_from_file(watermark_image_file)
         
-        # Create a mask for the bottom right corner
-        mask = np.zeros(image.shape[:2], dtype=np.uint8)
-        h, w = gray.shape
-        roi_y = int(h * 0.7)
-        roi_x = int(w * 0.7)
-        
-        # Create text watermark template
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 1
-        thickness = 2
-        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
-        template = np.zeros((text_size[1] + 10, text_size[0] + 10), dtype=np.uint8)
-        cv2.putText(template, text, (5, text_size[1] + 5), font, font_scale, 255, thickness)
-        
-        # Detect and remove text watermark
-        roi = gray[roi_y:, roi_x:]
-        result = cv2.matchTemplate(roi, template, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-        
-        if max_val > 0.5:  # Threshold for detection
-            top_left = (roi_x + max_loc[0], roi_y + max_loc[1])
-            bottom_right = (top_left[0] + template.shape[1], top_left[1] + template.shape[0])
-            cv2.rectangle(mask, top_left, bottom_right, 255, -1)
-        
-        # Remove watermark using inpainting
-        processed = cv2.inpaint(image, mask, 3, cv2.INPAINT_TELEA)
-        return processed, True
-    except Exception as e:
-        return None, str(e)
+        results = []
+        # Process each uploaded image
+        for file in files:
+            if file and file.filename != "":
+                filename = secure_filename(file.filename)
+                orig_image = read_image_from_file(file)
+                processed_image, detection_msgs = remove_watermark(orig_image, wm_text, wm_img, threshold=0.5)
+                orig_b64 = cv2_to_base64(orig_image)
+                proc_b64 = cv2_to_base64(processed_image)
+                uid = str(uuid.uuid4())
+                success, proc_buffer = cv2.imencode('.png', processed_image)
+                if success:
+                    PROCESSED_IMAGES[uid] = proc_buffer.tobytes()
+                results.append({
+                    "uid": uid,
+                    "filename": filename,
+                    "original": orig_b64,
+                    "processed": proc_b64,
+                    "detections": detection_msgs
+                })
+        return render_template_string(RESULT_HTML, images=results)
+    return render_template_string(INDEX_HTML)
 
-@app.route('/')
-def home():
-    """Root endpoint showing API documentation."""
-    return jsonify({
-        "status": "online",
-        "message": "Watermark Removal API",
-        "endpoints": {
-            "/": {
-                "method": "GET",
-                "description": "This documentation"
-            },
-            "/api/status": {
-                "method": "GET",
-                "description": "Check API status"
-            },
-            "/api/remove-watermark": {
-                "method": "POST",
-                "description": "Remove watermark from image",
-                "parameters": {
-                    "image": "file (required)",
-                    "text": "string (optional, default: 'Meta AI')"
-                },
-                "returns": "JSON with processed image info and download URL"
-            },
-            "/api/download/<image_id>": {
-                "method": "GET",
-                "description": "Download processed image",
-                "returns": "Processed image file"
-            }
-        }
-    })
+@app.route("/download/<uid>")
+def download(uid):
+    if uid in PROCESSED_IMAGES:
+        return send_file(
+            io.BytesIO(PROCESSED_IMAGES[uid]),
+            mimetype='image/png',
+            as_attachment=True,
+            download_name=f"processed_{uid}.png"
+        )
+    return "File not found", 404
 
-@app.route('/api/status')
-def status():
-    """Status endpoint."""
-    return jsonify({
-        "status": "operational",
-        "watermark_loaded": WATERMARK_IMAGE is not None,
-        "processed_images": len(PROCESSED_IMAGES)
-    })
-
-@app.route('/api/remove-watermark', methods=['POST', 'GET'])
-def api_remove_watermark():
-    """Watermark removal endpoint."""
-    if request.method == 'GET':
-        return jsonify({
-            "error": "Method not allowed",
-            "message": "Please use POST method with an image file",
-            "example": {
-                "curl": "curl -X POST -F 'image=@your_image.jpg' http://localhost:5000/api/remove-watermark",
-                "python": """
-                    import requests
-                    files = {'image': open('your_image.jpg', 'rb')}
-                    response = requests.post('http://localhost:5000/api/remove-watermark', files=files)
-                """
-            }
-        }), 405
-
-    if 'image' not in request.files:
-        return jsonify({
-            "error": "No image provided",
-            "message": "Please provide an image file",
-            "status": "error"
-        }), 400
-
-    image_file = request.files['image']
-    if image_file.filename == '':
-        return jsonify({
-            "error": "No selected file",
-            "message": "Please select an image file",
-            "status": "error"
-        }), 400
-
-    try:
-        # Read image
-        image_bytes = image_file.read()
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if image is None:
-            return jsonify({
-                "error": "Invalid image",
-                "message": "Could not process the uploaded file as an image",
-                "status": "error"
-            }), 400
-
-        # Get watermark text
-        watermark_text = request.form.get('text', 'Meta AI')
-
-        # Process image
-        processed_image, result = remove_watermark(image, watermark_text)
-
-        if processed_image is None:
-            return jsonify({
-                "error": "Processing failed",
-                "message": str(result),
-                "status": "error"
-            }), 500
-
-        # Generate ID and save image
-        image_id = str(uuid.uuid4())
-        success, buffer = cv2.imencode('.png', processed_image)
-        if not success:
-            return jsonify({
-                "error": "Encoding failed",
-                "message": "Failed to encode processed image",
-                "status": "error"
-            }), 500
-
-        PROCESSED_IMAGES[image_id] = buffer.tobytes()
-
-        # Create preview
-        preview_size = (400, int(400 * processed_image.shape[0] / processed_image.shape[1]))
-        preview = cv2.resize(processed_image, preview_size)
-        _, preview_buffer = cv2.imencode('.jpg', preview, [cv2.IMWRITE_JPEG_QUALITY, 70])
-        preview_base64 = base64.b64encode(preview_buffer).decode('utf-8')
-
-        return jsonify({
-            "status": "success",
-            "message": "Image processed successfully",
-            "image_id": image_id,
-            "download_url": f"/api/download/{image_id}",
-            "preview": f"data:image/jpeg;base64,{preview_base64}"
-        })
-
-    except Exception as e:
-        return jsonify({
-            "error": "Server error",
-            "message": str(e),
-            "status": "error"
-        }), 500
-
-@app.route('/api/download/<image_id>')
-def download_image(image_id):
-    """Download processed image endpoint."""
-    if image_id not in PROCESSED_IMAGES:
-        return jsonify({
-            "error": "Image not found",
-            "message": "The requested image ID does not exist",
-            "status": "error"
-        }), 404
-
-    return send_file(
-        io.BytesIO(PROCESSED_IMAGES[image_id]),
-        mimetype='image/png',
-        as_attachment=True,
-        download_name=f'processed_{image_id}.png'
-    )
-
-@app.errorhandler(404)
-def not_found(e):
-    """Handle 404 errors."""
-    return jsonify({
-        "error": "Not found",
-        "message": "The requested endpoint does not exist",
-        "available_endpoints": ["/", "/api/status", "/api/remove-watermark", "/api/download/<image_id>"]
-    }), 404
-
-@app.errorhandler(500)
-def server_error(e):
-    """Handle 500 errors."""
-    return jsonify({
-        "error": "Server error",
-        "message": str(e),
-        "status": "error"
-    }), 500
-
-if __name__ == '__main__':
-    print("Starting Watermark Removal API...")
-    print(f"Watermark image loaded: {WATERMARK_IMAGE is not None}")
+if __name__ == "__main__":
     app.run(debug=True)
