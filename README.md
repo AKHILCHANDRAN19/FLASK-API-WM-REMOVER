@@ -10,10 +10,6 @@ This tool is intended **for educational and personal use only**. Removing waterm
 
 ---
 
-Yes! Since your app is built with Flask, you should add a **"Web Interface"** section in your `README.md` to highlight how users can access and use the app through a browser. Here's how you can structure it:  
-
----
-
 ## 🌐 Web Interface  
 
 This tool includes a **Flask-based web interface**, allowing users to **upload images, remove watermarks, and download the processed images—all from their browser!**  
