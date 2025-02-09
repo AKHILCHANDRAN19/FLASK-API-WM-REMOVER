@@ -2,5 +2,5 @@ Flask
 opencv-python
 numpy
 requests
+Werkzeug
 scikit-image
-gunicorn
