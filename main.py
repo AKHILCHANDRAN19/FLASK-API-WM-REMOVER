@@ -27,7 +27,7 @@ except:
 # HTML templates with enhanced styling and animations
 # Version 1 - INDEX_HTML (Sleek Dark)
 INDEX_HTML = """
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html>
 <head>
     <title>Professional Watermark Remover</title>
@@ -42,6 +42,8 @@ INDEX_HTML = """
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --accent: #7c3aed;
+            --gradient-start: #4f46e5;
+            --gradient-end: #7c3aed;
         }
         
         * {
@@ -57,6 +59,7 @@ INDEX_HTML = """
             color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a2e 100%);
         }
         
         .container {
@@ -69,13 +72,17 @@ INDEX_HTML = """
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideIn 0.6s ease-out;
         }
-        
-        @media (max-width: 768px) {
-            .container {
-                width: 95%;
-                padding: 1rem;
-                margin: 1rem auto;
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
         
@@ -85,6 +92,16 @@ INDEX_HTML = """
             text-align: center;
             font-size: clamp(1.8rem, 4vw, 2.5rem);
             text-shadow: 0 0 15px rgba(109, 40, 217, 0.5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px rgba(109, 40, 217, 0.5);
+            }
+            to {
+                text-shadow: 0 0 20px rgba(109, 40, 217, 0.8);
+            }
         }
         
         .upload-section {
@@ -93,16 +110,59 @@ INDEX_HTML = """
             border-radius: 1rem;
             margin-bottom: 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            transform: translateZ(0);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .upload-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         
-        @media (max-width: 480px) {
-            .upload-section {
-                padding: 1rem;
-            }
+        .progress-container {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            margin: 1rem 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 10px;
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+            border-radius: 1rem;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
         
         .form-group {
             margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
         }
         
         label {
@@ -110,6 +170,13 @@ INDEX_HTML = """
             font-weight: 600;
             margin-bottom: 0.5rem;
             color: var(--text-primary);
+            position: relative;
+            z-index: 1;
+        }
+
+        label i {
+            margin-right: 0.5rem;
+            color: var(--primary-color);
         }
         
         input[type="file"],
@@ -122,15 +189,17 @@ INDEX_HTML = """
             font-size: 1rem;
             color: var(--text-primary);
             margin-top: 0.5rem;
+            transition: all 0.3s ease;
         }
         
         input[type="file"]:hover,
         input[type="text"]:hover {
             border-color: var(--primary-color);
+            box-shadow: 0 0 15px rgba(109, 40, 217, 0.3);
         }
         
         button {
-            background: var(--primary-color);
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
             color: white;
             padding: 1rem 2rem;
             border: none;
@@ -146,10 +215,31 @@ INDEX_HTML = """
             text-transform: uppercase;
             letter-spacing: 1px;
             box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
+            position: relative;
+            overflow: hidden;
         }
         
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
         button:hover {
-            background: var(--primary-hover);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(109, 40, 217, 0.4);
         }
@@ -171,22 +261,21 @@ INDEX_HTML = """
             to { transform: rotate(360deg); }
         }
         
-        .info-text {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-        
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
             margin-top: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease-out forwards;
+            animation-delay: 0.3s;
         }
-        
-        @media (max-width: 768px) {
-            .features-grid {
-                grid-template-columns: 1fr;
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
         
@@ -197,6 +286,12 @@ INDEX_HTML = """
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(5px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         
         .feature-card i {
@@ -205,31 +300,129 @@ INDEX_HTML = """
             margin-bottom: 1rem;
             text-shadow: 0 0 10px rgba(109, 40, 217, 0.5);
         }
-        
-        .feature-card h3 {
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
+
+        /* File upload custom styling */
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            border: 2px dashed var(--primary-color);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
         }
-        
-        .feature-card p {
-            color: var(--text-secondary);
+
+        .file-upload-wrapper:hover {
+            border-color: var(--primary-hover);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .file-upload-wrapper input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-content {
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .upload-content i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
     </style>
     <script>
         function showLoading() {
             document.querySelector('.loading').style.display = 'block';
+            document.querySelector('.progress-container').style.display = 'block';
             document.querySelector('button[type="submit"]').disabled = true;
+            simulateProgress();
+        }
+        
+        function simulateProgress() {
+            let progress = 0;
+            const progressBar = document.querySelector('.progress-bar');
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 100) progress = 100;
+                progressBar.style.width = progress + '%';
+                if (progress === 100) clearInterval(interval);
+            }, 500);
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+                document.body.removeChild(toast);
+            }, 3000);
         }
         
         function validateForm() {
             const fileInput = document.querySelector('input[name="images"]');
             if (fileInput.files.length === 0) {
-                alert('Please select at least one image to process.');
+                showToast('Please select at least one image to process.');
                 return false;
             }
             showLoading();
             return true;
         }
+
+        // File upload preview
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            const uploadContent = document.querySelector('.upload-content');
+            if (files.length > 0) {
+                uploadContent.innerHTML = `
+                    <i class="fas fa-check-circle"></i>
+                    <p>${files.length} file(s) selected</p>
+                `;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.querySelector('input[name="images"]');
+            fileInput.addEventListener('change', handleFileSelect);
+        });
     </script>
 </head>
 <body>
@@ -239,7 +432,13 @@ INDEX_HTML = """
             <div class="upload-section">
                 <div class="form-group">
                     <label><i class="fas fa-images"></i> Select Images</label>
-                    <input type="file" name="images" multiple accept="image/*" required>
+                    <div class="file-upload-wrapper">
+                        <input type="file" name="images" multiple accept="image/*" required>
+                        <div class="upload-content">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag & drop your images here or click to browse</p>
+                        </div>
+                    </div>
                     <div class="info-text">Multiple images allowed. Supported formats: PNG, JPG, JPEG</div>
                 </div>
                 
@@ -247,6 +446,10 @@ INDEX_HTML = """
                     <label><i class="fas fa-text-height"></i> Custom Text Watermark (Optional)</label>
                     <input type="text" name="watermark_text" placeholder="Default: Meta AI">
                     <div class="info-text">Leave empty to use default "Meta AI" watermark</div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar"></div>
                 </div>
             </div>
             
@@ -278,7 +481,7 @@ INDEX_HTML = """
         </div>
     </div>
 </body>
-</html>
+</html>                             
 """
 
 # Version 1 - RESULT_HTML (Sleek Dark)
@@ -297,7 +500,9 @@ RESULT_HTML = """
             --bg-card: #1e293b;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
-            --accent: #7c3aed;
+            --success-color: #10b981;
+            --accent-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+            --card-gradient: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(124, 58, 237, 0.1));
         }
         
         * {
@@ -312,78 +517,154 @@ RESULT_HTML = """
             background: var(--bg-dark);
             color: var(--text-primary);
             line-height: 1.6;
-            padding: 1rem;
             min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1a1a2e 100%);
+            padding-bottom: 2rem;
+        }
+
+        .user-info {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         
         .container {
             max-width: 1200px;
-            margin: auto;
-            padding: 1rem;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
         
         h1 {
-            color: var(--primary-color);
-            margin-bottom: 2rem;
-            text-align: center;
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
-            text-shadow: 0 0 15px rgba(109, 40, 217, 0.5);
+            color: transparent;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 1rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            height: 4px;
+            background: var(--accent-gradient);
+            border-radius: 2px;
         }
         
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+            animation: fadeIn 0.8s ease-out;
+            animation-delay: 0.2s;
+            opacity: 0;
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
         }
         
         .stat-card {
-            background: var(--bg-card);
+            background: var(--card-gradient);
             padding: 1.5rem;
             border-radius: 1rem;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
+            transform: translateZ(0);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.2);
         }
         
         .stat-card i {
-            font-size: 1.5rem;
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
         }
         
         .image-pair {
-            background: var(--bg-card);
+            background: rgba(30, 41, 59, 0.7);
             padding: 2rem;
-            border-radius: 1rem;
+            border-radius: 1.5rem;
             margin-bottom: 2rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            animation: fadeIn 0.5s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 0.6s ease-out forwards;
         }
-        
-        @media (max-width: 768px) {
-            .image-pair {
-                padding: 1rem;
+
+        .image-pair:nth-child(odd) {
+            animation-delay: 0.2s;
+        }
+
+        .image-pair:nth-child(even) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
         .image-pair h3 {
-            color: var(--primary-color);
+            color: var(--text-primary);
             margin-bottom: 1.5rem;
-            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.25rem;
+        }
+
+        .image-pair h3 i {
+            color: var(--primary-color);
         }
         
         .image-comparison {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
             margin-bottom: 1.5rem;
         }
@@ -391,15 +672,20 @@ RESULT_HTML = """
         .image-container {
             position: relative;
             overflow: hidden;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .image-container:hover {
+            transform: scale(1.02);
         }
         
         .image-container img {
             width: 100%;
             height: auto;
             display: block;
-            border-radius: 0.5rem;
+            transition: transform 0.3s ease;
         }
         
         .image-label {
@@ -408,50 +694,76 @@ RESULT_HTML = """
             left: 1rem;
             background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 1.5rem;
             border-radius: 2rem;
             font-size: 0.875rem;
             backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1;
         }
         
         .detection-info {
             background: rgba(255, 255, 255, 0.05);
             padding: 1.5rem;
-            border-radius: 0.5rem;
+            border-radius: 1rem;
             margin: 1.5rem 0;
             font-size: 0.875rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
-        
-        .detection-info strong {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-            color: var(--primary-color);
+
+        .detection-info::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            animation: shine 2s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
         
         .download-btn {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            background: var(--primary-color);
+            background: var(--accent-gradient);
             color: white;
             padding: 0.75rem 1.5rem;
             border-radius: 0.5rem;
             text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
         }
-        
+
+        .download-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .download-btn:hover::before {
+            left: 100%;
+        }
+
         .download-btn:hover {
-            background: var(--primary-hover);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(109, 40, 217, 0.4);
         }
-        
-        
         
         .back-btn {
             display: inline-flex;
@@ -461,37 +773,70 @@ RESULT_HTML = """
             text-decoration: none;
             font-weight: 600;
             margin-top: 2rem;
-        }
-        
-        .back-btn:hover {
-            color: var(--secondary-color);
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 1rem;
+            padding: 0.75rem 1.5rem;
             border-radius: 0.5rem;
-            text-align: center;
-            box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
         }
-        
-        .stat-card i {
-            font-size: 1.5rem;
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(-5px);
+        }
+
+        /* Success Badge Animation */
+        .success-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-color);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            .image-comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="user-info">
+        <i class="fas fa-user-circle"></i>
+        <span>{{ username }}</span>
+        <span>•</span>
+        <span>{{ current_time }}</span>
+    </div>
+
     <div class="container">
-        <h1><i class="fas fa-check-circle"></i> Processing Results</h1>
+        <div class="header">
+            <h1><i class="fas fa-check-circle"></i> Processing Results</h1>
+            <div class="success-badge">
+                <i class="fas fa-check"></i>
+                All images processed successfully
+            </div>
+        </div>
         
         <div class="stats">
             <div class="stat-card">
@@ -504,19 +849,33 @@ RESULT_HTML = """
                 <h3>100%</h3>
                 <p>Success Rate</p>
             </div>
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <h3>{{ processing_time }}s</h3>
+                <p>Processing Time</p>
+            </div>
         </div>
         
         {% for item in images %}
         <div class="image-pair">
-            <h3><i class="fas fa-image"></i> {{ item.filename }}</h3>
+            <h3>
+                <i class="fas fa-image"></i>
+                {{ item.filename }}
+            </h3>
             
             <div class="image-comparison">
                 <div class="image-container">
-                    <span class="image-label">Original</span>
+                    <span class="image-label">
+                        <i class="fas fa-file-image"></i>
+                        Original
+                    </span>
                     <img src="data:image/png;base64,{{ item.original }}" alt="Original Image">
                 </div>
                 <div class="image-container">
-                    <span class="image-label">Processed</span>
+                    <span class="image-label">
+                        <i class="fas fa-magic"></i>
+                        Processed
+                    </span>
                     <img src="data:image/png;base64,{{ item.processed }}" alt="Processed Image">
                 </div>
             </div>
@@ -538,8 +897,31 @@ RESULT_HTML = """
             <i class="fas fa-arrow-left"></i> Process More Images
         </a>
     </div>
+
+    <script>
+        // Display current user and time
+        document.addEventListener('DOMContentLoaded', function() {
+            const userInfo = document.querySelector('.user-info');
+            userInfo.innerHTML = `
+                <i class="fas fa-user-circle"></i>
+                <span>AKHILCHANDRAN19</span>
+                <span>•</span>
+                <span>2025-02-09 11:05:23</span>
+            `;
+        });
+
+        // Add smooth scroll animation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
 </body>
-</html>
+</html>            
 """
 
 def read_image_from_file(file_storage):
