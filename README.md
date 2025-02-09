@@ -18,7 +18,7 @@ This tool includes a **Flask-based web interface**, allowing users to **upload i
 #### **Upload Image → Process → Download**
 Home | Result
 :-------------------------:|:-------------------------:  
-![Before](https://via.placeholder.com/300?text=Before) | ![After](https://via.placeholder.com/300?text=After)  
+![Before](https://github.com/AKHILCHANDRAN19/FLASK-APP-WM-REMOVER-META-AI/blob/main/Ui1.jpg) | ![After](https://github.com/AKHILCHANDRAN19/FLASK-APP-WM-REMOVER-META-AI/blob/main/Ui2.jpg)  
 
 ---
 
