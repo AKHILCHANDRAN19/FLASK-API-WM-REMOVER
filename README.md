@@ -41,11 +41,11 @@ Home | Result
 ## 📌 How to Use  
 1. **clone the repository**
    ```bash
-   git clone https://github.com/AKHILCHANDRAN19/FLASK-APP-WM-REMOVER-META-AI
+   git clone https://github.com/AKHILCHANDRAN19/WatermarkRemover
    ```
 2. **Go inside the cloned repository**
    ```bash
-   cd FLASK-APP-WM-REMOVER-META-AI
+   cd WatermarkRemover
    ```
 3. **Install Dependencies**  
    ```bash
