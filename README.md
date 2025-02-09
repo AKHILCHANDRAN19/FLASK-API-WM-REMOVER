@@ -42,7 +42,7 @@ This tool is intended **for educational and personal use only**. Removing waterm
 ## 🎨 Preview  
 Before | After  
 :-------------------------:|:-------------------------:  
-![Before](https://via.placeholder.com/300?text=Before) | ![After](https://via.placeholder.com/300?text=After)  
+![Before](https://github.com/AKHILCHANDRAN19/FLASK-APP-WM-REMOVER-META-AI/blob/main/before.jpg) | ![After](https://github.com/AKHILCHANDRAN19/FLASK-APP-WM-REMOVER-META-AI/blob/main/After.png)  
 
 ---
 
