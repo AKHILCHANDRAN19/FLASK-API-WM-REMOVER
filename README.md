@@ -10,6 +10,30 @@ This tool is intended **for educational and personal use only**. Removing waterm
 
 ---
 
+Yes! Since your app is built with Flask, you should add a **"Web Interface"** section in your `README.md` to highlight how users can access and use the app through a browser. Here's how you can structure it:  
+
+---
+
+## 🌐 Web Interface  
+
+This tool includes a **Flask-based web interface**, allowing users to **upload images, remove watermarks, and download the processed images—all from their browser!**  
+
+### **📸 Web App Preview**  
+#### **Upload Image → Process → Download**
+Home | Result
+:-------------------------:|:-------------------------:  
+![Before](https://via.placeholder.com/300?text=Before) | ![After](https://via.placeholder.com/300?text=After)  
+
+---
+
+### **🌟 Features of the Web Interface**  
+✔️ **Drag & Drop Image Upload**  
+✔️ **One-Click Watermark Removal**  
+✔️ **Download Processed Images Instantly**  
+✔️ **Simple & User-Friendly UI**  
+
+---
+
 ## ✨ Features  
 ✅ Removes AI-generated watermarks from Meta-created images  
 ✅ Maintains original image quality  
