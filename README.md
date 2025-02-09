@@ -39,16 +39,24 @@ Home | Result
 ---
 
 ## 📌 How to Use  
-1. **Install Dependencies**  
+1. **clone the repository**
+   ```bash
+   git clone https://github.com/AKHILCHANDRAN19/FLASK-APP-WM-REMOVER-META-AI
+   ```
+2. **Go inside the cloned repository**
+   ```bash
+   cd FLASK-APP-WM-REMOVER-META-AI
+   ```
+3. **Install Dependencies**  
    ```bash
    pip install -r requirements.txt
    ```  
-2. **Run the Script**  
+4. **Run the Script**  
    ```bash
-   python remove_watermark.py
+   python main.py
    ```  
-3. **Select Image** – Upload your AI-generated image  
-4. **Process & Save** – Get your watermark-free image  
+5. **Select Image** – Upload your AI-generated image  
+6. **Process & Save** – Get your watermark-free image  
 
 ---
 
