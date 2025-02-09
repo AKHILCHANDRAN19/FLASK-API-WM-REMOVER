@@ -1,7 +1,7 @@
 
 # 🚀 Remove Watermark from Meta AI-Generated Images  
 
-![AI Image Watermark Remover](https://via.placeholder.com/1000x400?text=AI+Image+Watermark+Remover)  
+![AI Image Watermark Remover](https://github.com/AKHILCHANDRAN19/FLASK-APP-WM-REMOVER-META-AI/blob/main/logo.png)  
 
 🔹 **Effortlessly remove watermarks from Meta AI-generated images** while maintaining high quality! This tool is designed for research, fair use, and personal projects.  
 
