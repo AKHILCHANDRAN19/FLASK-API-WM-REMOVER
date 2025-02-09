@@ -374,8 +374,6 @@ RESULT_HTML = """
 </html>
 """
 
-[Previous code for image processing functions remains the same...]
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
