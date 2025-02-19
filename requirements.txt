@@ -4,3 +4,4 @@ numpy
 requests
 Werkzeug
 scikit-image
+gunicorn
